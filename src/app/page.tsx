@@ -1,63 +1,176 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import CalculatorForm from '@/components/CalculatorForm';
+import ResultsDisplay from '@/components/ResultsDisplay';
+import SavedCalculations from '@/components/SavedCalculations';
+import { CalculationInput, CalculationResult, calculateForfettario } from '@/lib/calculator';
+import { saveCalculation, getCalculations } from '@/lib/storage';
+import { exportToPDF, downloadJSON } from '@/lib/pdfExport';
 
 export default function Home() {
+  const [input, setInput] = useState<CalculationInput>({
+    fatturatoMensile: 0,
+    codiceAteco: '',
+    coefficienteRedditivita: 0.78,
+    aliquotaImpostaSostitutiva: 0.05,
+    aliquotaContributiPrevidenziali: 0.2607,
+    oreLavorateMensili: 138,
+  });
+
+  const [results, setResults] = useState<CalculationResult | null>(null);
+  const [showSaved, setShowSaved] = useState(false);
+
+  useEffect(() => {
+    const savedCalculations = getCalculations();
+    if (savedCalculations.length > 0) {
+      const latest = savedCalculations[savedCalculations.length - 1];
+      setInput(latest.input);
+      setResults(latest.results);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (input.fatturatoMensile > 0) {
+      const calculatedResults = calculateForfettario(input);
+      setResults(calculatedResults);
+    } else {
+      setResults(null);
+    }
+  }, [input]);
+
+  const handleInputChange = (newInput: CalculationInput) => {
+    setInput(newInput);
+  };
+
+  const handleSaveCalculation = () => {
+    if (results) {
+      const name = prompt('Inserisci un nome per questo calcolo:', `Calcolo del ${new Date().toLocaleDateString('it-IT')}`);
+      if (name) {
+        saveCalculation(input, results, name);
+        alert('Calcolo salvato con successo!');
+      }
+    }
+  };
+
+  const handleLoadCalculation = (loadedInput: CalculationInput, loadedResults: CalculationResult) => {
+    setInput(loadedInput);
+    setResults(loadedResults);
+    setShowSaved(false);
+  };
+
+  const handleExportPDF = async () => {
+    if (results) {
+      try {
+        await exportToPDF(input, results, 'results-container');
+      } catch (error) {
+        console.error('Errore durante l\'esportazione PDF:', error);
+        alert('Errore durante l\'esportazione del PDF. Riprova più tardi.');
+      }
+    }
+  };
+
+  const handleExportJSON = () => {
+    if (results) {
+      downloadJSON(input, results);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Calcolo Regime Forfettario</h1>
+              <p className="text-sm text-gray-600 mt-1">Calcola il netto reale per freelance in regime forfettario</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowSaved(!showSaved)}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  showSaved 
+                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {showSaved ? 'Nascondi' : 'Mostra'} Calcoli Salvati
+              </button>
+              {results && (
+                <>
+                  <button
+                    onClick={handleSaveCalculation}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Salva Calcolo
+                  </button>
+                  <button
+                    onClick={handleExportJSON}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Esporta JSON
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <CalculatorForm input={input} onInputChange={handleInputChange} />
+            <div id="results-container">
+              <ResultsDisplay results={results} onExportPDF={handleExportPDF} />
+            </div>
+          </div>
+          
+          <div className="lg:col-span-1">
+            {showSaved && (
+              <SavedCalculations onLoadCalculation={handleLoadCalculation} />
+            )}
+            
+            {/* Informazioni Utili */}
+            <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Informazioni Utili</h3>
+              
+              <div className="space-y-4 text-sm">
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-1">Regime Forfettario</h4>
+                  <p className="text-gray-600">
+                    Il regime forfettario è un regime fiscale semplificato per freelance e piccole imprese con ricavi annui inferiori a €85.000.
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-1">Scadenze Fiscali</h4>
+                  <ul className="text-gray-600 space-y-1">
+                    <li>• <strong>Giugno:</strong> Saldo imposte anno precedente</li>
+                    <li>• <strong>Novembre:</strong> Primo acconto imposte anno corrente</li>
+                    <li>• <strong>Dicembre:</strong> Secondo acconto (se dovuto)</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-1">Coefficienti di Redditività</h4>
+                  <ul className="text-gray-600 space-y-1">
+                    <li>• <strong>78%:</strong> Lavoratori autonomi (default)</li>
+                    <li>• <strong>67%:</strong> Professioni con cassa</li>
+                    <li>• <strong>86%:</strong> Commercio</li>
+                    <li>• <strong>40%:</strong> Altre attività</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <p className="text-blue-800 text-xs">
+                    <strong>Importante:</strong> Il "Netto Spendibile" è ciò che rimane dopo aver accantonato il 40% del fatturato per le tasse. 
+                    I calcoli definitivi vengono fatti in dichiarazione dei redditi, ma accantonare regolarmente ti evita sorprese!
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>
