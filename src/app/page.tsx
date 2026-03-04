@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import CalculatorForm from '@/components/CalculatorForm';
 import ResultsDisplay from '@/components/ResultsDisplay';
 import SavedCalculations from '@/components/SavedCalculations';
+import ExportOptions from '@/components/ExportOptions';
 import { CalculationInput, CalculationResult, calculateForfettario } from '@/lib/calculator';
 import { saveCalculation, getCalculations } from '@/lib/storage';
 import { exportToPDF, downloadJSON } from '@/lib/pdfExport';
@@ -15,7 +16,17 @@ export default function Home() {
     coefficienteRedditivita: 0.78,
     aliquotaImpostaSostitutiva: 0.05,
     aliquotaContributiPrevidenziali: 0.2607,
+    modalitaCalcolo: 'oreTotali',
     oreLavorateMensili: 138,
+    giorniLavorativiMensili: 22,
+    oreLavorativeGiornaliere: 8,
+    giorniLavorativiSettimanali: 5,
+    tariffaOrariaDesiderata: 0,
+    serviziInclusi: {
+      uxui: true,
+      frontend: true,
+      htmlcss: true
+    }
   });
 
   const [results, setResults] = useState<CalculationResult | null>(null);
@@ -124,6 +135,7 @@ export default function Home() {
             <div id="results-container">
               <ResultsDisplay results={results} onExportPDF={handleExportPDF} />
             </div>
+            {results && <ExportOptions input={input} results={results} />}
           </div>
           
           <div className="lg:col-span-1">

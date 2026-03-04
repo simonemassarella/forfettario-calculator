@@ -201,7 +201,7 @@ export default function ResultsDisplay({ results, onExportPDF }: ResultsDisplayP
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-xl font-bold text-gray-800 mb-4">Analisi Oraria</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="bg-green-50 rounded-lg p-4">
               <h4 className="text-sm font-medium text-green-800 mb-2">Tariffa Oraria Netta</h4>
               <p className="text-2xl font-bold text-green-900">
@@ -218,11 +218,37 @@ export default function ResultsDisplay({ results, onExportPDF }: ResultsDisplayP
               <p className="text-xs text-orange-700 mt-1">Dopo accantonamento tasse</p>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-blue-50 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">Giorni Settimanali</h4>
+              <p className="text-xl font-bold text-blue-900">{results.giorniLavorativiSettimanali}</p>
+              <p className="text-xs text-blue-700 mt-1">giorni/settimana</p>
+            </div>
+            
+            <div className="bg-blue-50 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">Giorni Mensili</h4>
+              <p className="text-xl font-bold text-blue-900">{results.giorniLavorativi}</p>
+              <p className="text-xs text-blue-700 mt-1">giorni/mese</p>
+            </div>
+            
+            <div className="bg-blue-50 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">Ore Giornaliere</h4>
+              <p className="text-xl font-bold text-blue-900">{results.oreGiornaliere}</p>
+              <p className="text-xs text-blue-700 mt-1">ore/giorno</p>
+            </div>
+            
+            <div className="bg-blue-50 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">Ore Totali</h4>
+              <p className="text-xl font-bold text-blue-900">{results.oreLavorateTotali}</p>
+              <p className="text-xs text-blue-700 mt-1">ore/mese</p>
+            </div>
+          </div>
           
           <div className="mt-4 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>Esempio pratico:</strong> Con 2000€ di fatturato e 138 ore lavorative, 
-              accantonando 800€ (40% del FATTURATO) per le tasse, ti rimangono 1200€ spendibili, 
+              <strong>Esempio pratico:</strong> Con {results.oreLavorateTotali} ore lavorative ({results.giorniLavorativi} giorni × {results.oreGiornaliere} ore/giorno), 
+              accantonando il 40% del fatturato per le tasse, ti rimangono {formatCurrency(results.nettoDopoAccantonamentoEffettivo)} spendibili, 
               equivalenti a {formatCurrency(results.tariffaOrariaSpendibile || 0)}/ora.
               <br /><br />
               <strong>Importante:</strong> L'accantonamento si calcola sempre sul fatturato, non sul netto!
