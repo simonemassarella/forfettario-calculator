@@ -251,25 +251,33 @@ export function generaEmailSemplificata(input: CalculationInput, result: Calcula
   const servizi = [];
   if (input.serviziInclusi?.uxui) servizi.push('UX/UI design in Figma');
   if (input.serviziInclusi?.frontend) servizi.push('sviluppo front-end');
-  if (input.serviziInclusi?.htmlcss) servizi.push('HTML/CSS');
+  if (input.serviziInclusi?.htmlcss) {
+    // Rimuovi "sviluppo front-end" se c'è già HTML/CSS per evitare duplicazioni
+    const frontendIndex = servizi.indexOf('sviluppo front-end');
+    if (frontendIndex > -1) {
+      servizi[frontendIndex] = 'sviluppo front-end (HTML/CSS)';
+    } else {
+      servizi.push('HTML/CSS');
+    }
+  }
   
-  const descrizioneServizi = servizi.length > 0 ? servizi.join(', ') : 'sviluppo web';
+  const descrizioneServizi = servizi.length > 0 ? servizi.join(' e ') : 'sviluppo web';
   
   let testo = `Oggetto: Proposta collaborazione – UX/UI & Front-end
 
 Buonasera,
 
 come anticipato durante il colloquio, confermo il mio interesse a collaborare al vostro progetto.
-In riferimento al ruolo che integra attività di ${descrizioneServizi}, propongo una tariffa di ${formatCurrency(tariffaOraria)}/h, con un impegno di ${result.giorniLavorativiSettimanali} giorni settimanali,`;
+In riferimento al ruolo che integra attività di ${descrizioneServizi}, propongo una tariffa di ${formatCurrency(tariffaOraria)}/h, con un impegno di ${result.giorniLavorativiSettimanali * result.oreGiornaliere} ore settimanali,`;
 
   // Aggiungi dettaglio organizzazione ore
   if (input.modalitaCalcolo !== 'oreTotali') {
-    testo += `organizzabili in ${result.giorniLavorativiSettimanali} giorni da ${result.oreGiornaliere} ore al giorno`;
+    testo += `organizzabili in modo strutturato per garantire continuità ed efficienza nel flusso di lavoro.`;
   } else {
-    testo += `organizzabili in modo flessibile`;
+    testo += `organizzabili in modo flessibile per garantire continuità ed efficienza nel flusso di lavoro.`;
   }
 
-  testo += ` per garantire continuità ed efficienza nel flusso di lavoro.
+  testo += `
 
 Ritengo che questa organizzazione permetta una collaborazione stabile e ben integrata con il team, con possibilità di modulare l'impegno in base alle esigenze future del progetto.
 
@@ -287,7 +295,7 @@ Simone Massarella
 ---
 Riepilogo economico:
 • Tariffa oraria: ${formatCurrency(tariffaOraria)}/h
-• Impegno settimanale: ${result.giorniLavorativiSettimanali} giorni (${result.giorniLavorativiSettimanali} × ${result.oreGiornaliere} ore)
+• Impegno settimanale: ${result.giorniLavorativiSettimanali * result.oreGiornaliere} ore (${result.giorniLavorativiSettimanali} giorni × ${result.oreGiornaliere} ore)
 • Fatturato mensile: ${formatCurrency(fatturato)}
 • Netto mensile: ${formatCurrency(result.nettoMensileReale)}
 • Netto spendibile: ${formatCurrency(result.nettoDopoAccantonamentoEffettivo)}
