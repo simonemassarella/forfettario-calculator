@@ -5,6 +5,8 @@ import CalculatorForm from '@/components/CalculatorForm';
 import ResultsDisplay from '@/components/ResultsDisplay';
 import SavedCalculations from '@/components/SavedCalculations';
 import ExportOptions from '@/components/ExportOptions';
+import ProfiloDisplay from '@/components/ProfiloDisplay';
+import CalendarioAnnuale from '@/components/CalendarioAnnuale';
 import { CalculationInput, CalculationResult, calculateForfettario } from '@/lib/calculator';
 import { saveCalculation, getCalculations } from '@/lib/storage';
 import { exportToPDF, downloadJSON } from '@/lib/pdfExport';
@@ -139,6 +141,12 @@ export default function Home() {
           </div>
           
           <div className="lg:col-span-1">
+            <ProfiloDisplay />
+            <CalendarioAnnuale 
+              key={`calendario-${JSON.stringify(input)}`} 
+              giorniSettimanali={input.giorniLavorativiSettimanali || 5} 
+              inputBase={input} 
+            />
             {showSaved && (
               <SavedCalculations onLoadCalculation={handleLoadCalculation} />
             )}

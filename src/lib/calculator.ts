@@ -1,3 +1,18 @@
+export interface ProfiloProfessionale {
+  nomeAttivita: string;
+  nomeCognome: string;
+  codiceFiscale: string;
+  partitaIva: string;
+  codiceAteco: string;
+  regime: string;
+  impostaSostitutiva: number;
+  coefficienteRedditivita: number;
+  dataInizioAttivita: string;
+  cassaPrevidenziale: string;
+  matricola: string;
+  dataIscrizione: string;
+}
+
 export interface CalculationInput {
   fatturatoMensile: number;
   codiceAteco?: string;
@@ -28,6 +43,7 @@ export interface CalculationResult {
   percentualeDaAccantonare: number;
   nettoDisponibile: number;
   nettoDopoAccantonamentoEffettivo: number;
+  importoAccantonamento: number;
   percentualeTasseContributi: number;
   accantonamentoSaldo: number;
   accantonamentoAcconti: number;
@@ -116,9 +132,7 @@ export function calculateForfettario(input: CalculationInput): CalculationResult
   const tariffaOrariaSpendibile = oreTotali > 0 ? nettoDopoAccantonamentoEffettivo / oreTotali : 0;
 
   // Calcolo fatturato da tariffa oraria (se in modalità tariffa)
-  const fatturatoDaTariffaOraria = modalitaCalcolo === 'tariffaOraria' && tariffaOrariaDesiderata 
-    ? tariffaOrariaDesiderata * oreTotali 
-    : undefined;
+  const fatturatoDaTariffaOraria = modalitaCalcolo === 'tariffaOraria' ? fatturatoFinale : undefined;
 
   return {
     redditoImponibile,
@@ -126,18 +140,19 @@ export function calculateForfettario(input: CalculationInput): CalculationResult
     contributiPrevidenziali,
     totaleTasseContributi,
     nettoMensileReale,
-    percentualeDaAccantonare: percentualeDaAccantonare * 100,
+    percentualeDaAccantonare,
     nettoDisponibile,
     nettoDopoAccantonamentoEffettivo,
+    importoAccantonamento: accantonamentoTotale,
     percentualeTasseContributi,
     accantonamentoSaldo,
     accantonamentoAcconti,
-    tariffaOrariaNetta,
-    tariffaOrariaSpendibile,
     oreLavorateTotali: oreTotali,
     giorniLavorativi: giorni,
     oreGiornaliere: oreGiornaliere,
     giorniLavorativiSettimanali: giorniSettimanali,
+    tariffaOrariaNetta,
+    tariffaOrariaSpendibile,
     fatturatoDaTariffaOraria,
   };
 }
@@ -153,20 +168,136 @@ export function formatPercentage(value: number): string {
   return `${value.toFixed(2)}%`;
 }
 
-export function calcolaGiorniMensiliDaSettimanali(giorniSettimanali: number): number {
-  // Calcola giorni lavorativi mensili basati su giorni settimanali
-  // Considerando circa 4.33 settimane in un mese (365/12/7)
-  const settimanePerMese = 4.33;
-  return Math.round(giorniSettimanali * settimanePerMese);
+export function calcolaGiorniLavorativiMensiliReali(giorniSettimanali: number, anno: number = new Date().getFullYear(), mese: number = new Date().getMonth()): number {
+  // Calcola i giorni lavorativi reali per un mese specifico
+  // Esclude sabato e domenica
+  
+  const primoGiorno = new Date(anno, mese, 1);
+  const ultimoGiorno = new Date(anno, mese + 1, 0); // Ultimo giorno del mese
+  
+  let giorniLavorativi = 0;
+  const giorniSettimanaLavorativi = Math.min(giorniSettimanali, 5); // Max 5 giorni lavorativi a settimana
+  
+  // Mappatura giorni lavorativi per ogni giorno della settimana
+  // 0=Domenica, 1=Lunedì, ..., 6=Sabato
+  const giorniLavorativiSettimana = [
+    false, // Domenica
+    true,  // Lunedì
+    true,  // Martedì
+    true,  // Mercoledì
+    true,  // Giovedì
+    true,  // Venerdì
+    false  // Sabato
+  ];
+  
+  // Se lavori meno di 5 giorni, disabilita gli ultimi giorni
+  if (giorniSettimanaLavorativi < 5) {
+    for (let i = 5; i >= giorniSettimanaLavorativi; i--) {
+      giorniLavorativiSettimana[i + 1] = false; // Venerdì=5, Giovedì=4, ecc.
+    }
+  }
+  
+  // Conta i giorni lavorativi nel mese
+  for (let giorno = 1; giorno <= ultimoGiorno.getDate(); giorno++) {
+    const dataCorrente = new Date(anno, mese, giorno);
+    const giornoSettimana = dataCorrente.getDay();
+    
+    if (giorniLavorativiSettimana[giornoSettimana]) {
+      giorniLavorativi++;
+    }
+  }
+  
+  return giorniLavorativi;
 }
+
+export function getDettaglioGiorniLavorativiMese(giorniSettimanali: number, anno: number = new Date().getFullYear(), mese: number = new Date().getMonth()): {
+  giorniTotali: number;
+  giorniLavorativi: number;
+  festivi: number;
+  weekend: number;
+  nomeMese: string;
+} {
+  const primoGiorno = new Date(anno, mese, 1);
+  const ultimoGiorno = new Date(anno, mese + 1, 0);
+  
+  const nomiMesi = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 
+                   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+  
+  let giorniLavorativi = 0;
+  let giorniWeekend = 0;
+  const giorniSettimanaLavorativi = Math.min(giorniSettimanali, 5);
+  
+  // Mappatura giorni lavorativi
+  const giorniLavorativiSettimana = [
+    false, // Domenica
+    true,  // Lunedì
+    true,  // Martedì
+    true,  // Mercoledì
+    true,  // Giovedì
+    true,  // Venerdì
+    false  // Sabato
+  ];
+  
+  // Se lavori meno di 5 giorni, disabilita gli ultimi giorni
+  if (giorniSettimanaLavorativi < 5) {
+    for (let i = 5; i >= giorniSettimanaLavorativi; i--) {
+      giorniLavorativiSettimana[i + 1] = false;
+    }
+  }
+  
+  // Conta i giorni nel mese
+  for (let giorno = 1; giorno <= ultimoGiorno.getDate(); giorno++) {
+    const dataCorrente = new Date(anno, mese, giorno);
+    const giornoSettimana = dataCorrente.getDay();
+    
+    if (giornoSettimana === 0 || giornoSettimana === 6) {
+      giorniWeekend++;
+    } else if (giorniLavorativiSettimana[giornoSettimana]) {
+      giorniLavorativi++;
+    }
+  }
+  
+  return {
+    giorniTotali: ultimoGiorno.getDate(),
+    giorniLavorativi,
+    festivi: giorniWeekend,
+    weekend: giorniWeekend,
+    nomeMese: nomiMesi[mese]
+  };
+}
+
+export const PROFILO_PREDEFINITO: ProfiloProfessionale = {
+  nomeAttivita: 'Massarella Simone',
+  nomeCognome: 'Massarella Simone',
+  codiceFiscale: 'MSSSMN88A28D662T',
+  partitaIva: '03339090593',
+  codiceAteco: '74.12.01',
+  regime: 'Forfettario',
+  impostaSostitutiva: 5,
+  coefficienteRedditivita: 78,
+  dataInizioAttivita: '02/09/2025',
+  cassaPrevidenziale: 'GS INPS',
+  matricola: '4000',
+  dataIscrizione: '08/09/2025'
+};
 
 export function generaTestoRiepilogo(input: CalculationInput, result: CalculationResult): string {
   const data = new Date().toLocaleDateString('it-IT');
+  const profilo = PROFILO_PREDEFINITO;
   
   let testo = `
 CALCOLO REDDITO FORFETTARIO
 Data: ${data}
 ==========================================
+
+PROFILO PROFESSIONALE:
+• Nome Attività: ${profilo.nomeAttivita}
+• Partita IVA: ${profilo.partitaIva}
+• Codice Fiscale: ${profilo.codiceFiscale}
+• Codice ATECO: ${profilo.codiceAteco}
+• Regime: ${profilo.regime}
+• Cassa Previdenziale: ${profilo.cassaPrevidenziale} (Matr. ${profilo.matricola})
+• Inizio Attività: ${profilo.dataInizioAttivita}
 
 DATI DI INPUT:
 • Fatturato Mensile: ${formatCurrency(result.fatturatoDaTariffaOraria || input.fatturatoMensile)}
@@ -190,7 +321,6 @@ DATI DI INPUT:
   }
 
   testo += `
-• Codice ATECO: ${input.codiceAteco || 'Non specificato'}
 • Coefficiente Redditività: ${(input.coefficienteRedditivita * 100).toFixed(0)}%
 • Aliquota Imposta Sostitutiva: ${(input.aliquotaImpostaSostitutiva * 100).toFixed(0)}%
 • Aliquota Contributi Previdenziali: ${(input.aliquotaContributiPrevidenziali * 100).toFixed(2)}%
@@ -205,9 +335,10 @@ RISULTATI DEL CALCOLO:
 
 ACCANTONAMENTO FISCALE (40% del fatturato):
 ==========================================
-• Importo da Accantonare: ${formatCurrency(result.fatturatoDaTariffaOraria || input.fatturatoMensile * 0.40)}
-• Netto Disponibile (prima accantonamento): ${formatCurrency(result.nettoDisponibile)}
-• Netto dopo Accantonamento Effettivo: ${formatCurrency(result.nettoDopoAccantonamentoEffettivo)}
+• Fatturato Lordo Mensile: ${formatCurrency(result.fatturatoDaTariffaOraria || input.fatturatoMensile)}
+• Importo da Accantonare (40%): ${formatCurrency(result.importoAccantonamento)}
+• Netto Spendibile Residuo: ${formatCurrency(result.nettoDopoAccantonamentoEffettivo)}
+• Netto Mensile Reale (prima accantonamento): ${formatCurrency(result.nettoMensileReale)}
 
 ANALISI ORARIA:
 ==========================================
@@ -238,6 +369,7 @@ NOTE IMPORTANTI:
 
 ---
 Generato con Calcolatore Forfettario
+${profilo.nomeAttivita} - P.IVA ${profilo.partitaIva}
 `;
 
   return testo.trim();
@@ -295,10 +427,12 @@ Simone Massarella
 ---
 Riepilogo economico:
 • Tariffa oraria: ${formatCurrency(tariffaOraria)}/h
-• Impegno settimanale: ${result.giorniLavorativiSettimanali * result.oreGiornaliere} ore (${result.giorniLavorativiSettimanali} giorni × ${result.oreGiornaliere} ore)
-• Fatturato mensile: ${formatCurrency(fatturato)}
-• Netto mensile: ${formatCurrency(result.nettoMensileReale)}
-• Netto spendibile: ${formatCurrency(result.nettoDopoAccantonamentoEffettivo)}
+• Impegno settimanale: ${result.giorniLavorativiSettimanali} giorni (${result.giorniLavorativiSettimanali} × ${result.oreGiornaliere} ore)
+• Fatturato lordo mensile: ${formatCurrency(fatturato)}
+• Tasse e contributi totali: ${formatCurrency(result.totaleTasseContributi)}
+• Netto mensile reale: ${formatCurrency(result.nettoMensileReale)}
+• Accantonamento (40% del fatturato): ${formatCurrency(result.importoAccantonamento)}
+• Netto spendibile residuo: ${formatCurrency(result.nettoDopoAccantonamentoEffettivo)}
 `;
 
   return testo.trim();

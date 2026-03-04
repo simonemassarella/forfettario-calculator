@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CalculationInput, calcolaGiorniMensiliDaSettimanali } from '@/lib/calculator';
+import { CalculationInput, calcolaGiorniLavorativiMensiliReali } from '@/lib/calculator';
 
 interface CalculatorFormProps {
   input: CalculationInput;
@@ -157,11 +157,12 @@ export default function CalculatorForm({ input, onInputChange }: CalculatorFormP
   };
 
   const handleGiorniSettimanaliChange = (giorniSettimanali: number) => {
-    const giorniMensili = calcolaGiorniMensiliDaSettimanali(giorniSettimanali);
+    // Usa il calcolo realistico basato sul calendario
+    const giorniMensiliReali = calcolaGiorniLavorativiMensiliReali(giorniSettimanali);
     onInputChange({
       ...input,
       giorniLavorativiSettimanali: giorniSettimanali,
-      giorniLavorativiMensili: giorniMensili,
+      giorniLavorativiMensili: giorniMensiliReali,
     });
   };
 
@@ -260,22 +261,51 @@ export default function CalculatorForm({ input, onInputChange }: CalculatorFormP
 
         {/* Campi dinamici basati sulla modalità */}
         {input.modalitaCalcolo === 'oreTotali' && (
-          <div>
-            <label htmlFor="ore" className="block text-sm font-medium text-gray-700 mb-2">
-              Ore Lavorate Mensili
-            </label>
-            <input
-              type="number"
-              id="ore"
-              value={input.oreLavorateMensili || 138}
-              onChange={(e) => handleInputChange('oreLavorateMensili', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              placeholder="138"
-              step="1"
-              min="1"
-            />
-            <p className="text-xs text-gray-500 mt-1">Default: 138 ore (circa 35h/settimana)</p>
-          </div>
+          <>
+            <div>
+              <label htmlFor="ore" className="block text-sm font-medium text-gray-700 mb-2">
+                Ore Lavorate Mensili
+              </label>
+              <input
+                type="number"
+                id="ore"
+                value={input.oreLavorateMensili || 138}
+                onChange={(e) => handleInputChange('oreLavorateMensili', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="138"
+                step="1"
+                min="1"
+              />
+              <p className="text-xs text-gray-500 mt-1">Default: 138 ore (circa 35h/settimana)</p>
+            </div>
+            
+            {/* Giorni Lavorativi Settimanali */}
+            <div>
+              <label htmlFor="giorniSettimanali" className="block text-sm font-medium text-gray-700 mb-2">
+                Giorni Lavorativi a Settimana
+              </label>
+              <QuickButtons
+                options={[3, 4, 5]}
+                selected={input.giorniLavorativiSettimanali || 5}
+                onSelect={handleGiorniSettimanaliChange}
+                suffix=" giorni"
+              />
+              <input
+                type="number"
+                id="giorniSettimanali"
+                value={input.giorniLavorativiSettimanali || 5}
+                onChange={(e) => handleGiorniSettimanaliChange(parseInt(e.target.value) || 5)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="5"
+                step="1"
+                min="1"
+                max="7"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Calcola automaticamente {calcolaGiorniLavorativiMensiliReali(input.giorniLavorativiSettimanali || 5)} giorni lavorativi questo mese (esclusi festivi)
+              </p>
+            </div>
+          </>
         )}
 
         {(input.modalitaCalcolo === 'giorniOre' || input.modalitaCalcolo === 'tariffaOraria') && (
@@ -303,7 +333,7 @@ export default function CalculatorForm({ input, onInputChange }: CalculatorFormP
                 max="7"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Calcola automaticamente {calcolaGiorniMensiliDaSettimanali(input.giorniLavorativiSettimanali || 5)} giorni al mese
+                Calcola automaticamente {calcolaGiorniLavorativiMensiliReali(input.giorniLavorativiSettimanali || 5)} giorni lavorativi questo mese (esclusi festivi)
               </p>
             </div>
 
